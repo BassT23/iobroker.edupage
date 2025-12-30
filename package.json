@@ -1,0 +1,25 @@
+{
+  "name": "iobroker.edupage",
+  "version": "0.0.1",
+  "description": "Fetch timetable and substitutions from EduPage",
+  "author": "Basst <sebastian@familiebecke.de>",
+  "license": "MIT",
+  "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "dependencies": {
+    "@iobroker/adapter-core": "^3.2.3",
+    "axios": "^1.6.8",
+    "axios-cookiejar-support": "^5.0.1",
+    "tough-cookie": "^4.1.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "node main.js --debug"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

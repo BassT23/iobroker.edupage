@@ -1,0 +1,46 @@
+{
+  "common": {
+    "name": "edupage",
+    "version": "0.0.1",
+    "title": "EduPage",
+    "titleLang": {
+      "en": "EduPage"
+    },
+    "desc": {
+      "en": "Fetch timetable and substitutions from EduPage"
+    },
+    "authors": [
+      "Basst <sebastian@familiebecke.de>"
+    ],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "mode": "daemon",
+    "icon": "edupage.png",
+    "enabled": true,
+    "extIcon": "",
+    "readme": "",
+    "loglevel": "info",
+    "keywords": [
+      "schedule",
+      "timetable",
+      "edupage"
+    ],
+    "type": "schedule",
+    "connectionType": "cloud",
+    "dataSource": "push",
+    "tier": 2,
+    "adminUI": {
+      "config": "html"
+    }
+  },
+  "native": {
+    "baseUrl": "",
+    "username": "",
+    "password": "",
+    "intervalMin": 15,
+    "maxLessons": 12,
+    "enableWeek": false
+  },
+  "objects": [],
+  "instanceObjects": []
+}

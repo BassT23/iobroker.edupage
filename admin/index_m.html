@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>EduPage</title>
+  <link rel="stylesheet" type="text/css" href="../../lib/css/materialize.css">
+  <link rel="stylesheet" type="text/css" href="../../css/adapter.css">
+  <script type="text/javascript" src="../../lib/js/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="../../socket.io/socket.io.js"></script>
+  <script type="text/javascript" src="../../js/translate.js"></script>
+  <script type="text/javascript" src="../../lib/js/materialize.js"></script>
+  <script type="text/javascript" src="../../js/adapter-settings.js"></script>
+
+  <script type="text/javascript">
+    function load(settings, onChange) {
+      if (!settings) return;
+      $('.value').each(function () {
+        const $key = $(this);
+        const id = $key.attr('id');
+        if ($key.attr('type') === 'checkbox') {
+          $key.prop('checked', settings[id]);
+        } else {
+          $key.val(settings[id]);
+        }
+      });
+      onChange(false);
+      M.updateTextFields();
+    }
+
+    function save(callback) {
+      const obj = {};
+      $('.value').each(function () {
+        const $key = $(this);
+        const id = $key.attr('id');
+        if ($key.attr('type') === 'checkbox') {
+          obj[id] = $key.prop('checked');
+        } else if ($key.attr('type') === 'number') {
+          obj[id] = parseFloat($key.val());
+        } else {
+          obj[id] = $key.val();
+        }
+      });
+      callback(obj);
+    }
+  </script>
+</head>
+
+<body>
+  <div class="m adapter-container">
+    <div class="row">
+      <div class="col s12 m8 l6">
+        <h5 class="translate">EduPage settings</h5>
+
+        <div class="input-field">
+          <input class="value" id="baseUrl" type="text" placeholder="https://rs-kollnau.edupage.org">
+          <label for="baseUrl" class="translate active">Base URL</label>
+        </div>
+
+        <div class="input-field">
+          <input class="value" id="username" type="text">
+          <label for="username" class="translate active">Username</label>
+        </div>
+
+        <div class="input-field">
+          <input class="value" id="password" type="password">
+          <label for="password" class="translate active">Password</label>
+        </div>
+
+        <div class="input-field">
+          <input class="value" id="intervalMin" type="number" min="5" step="1">
+          <label for="intervalMin" class="translate active">Refresh interval (minutes)</label>
+        </div>
+
+        <div class="input-field">
+          <input class="value" id="maxLessons" type="number" min="6" step="1">
+          <label for="maxLessons" class="translate active">Max lessons per day</label>
+        </div>
+
+        <div class="switch">
+          <label>
+            <span class="translate">Week view</span>
+            <input class="value" id="enableWeek" type="checkbox">
+            <span class="lever"></span>
+          </label>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EduPage</title>
 
-  <link rel="stylesheet" type="text/css" href="../../lib/css/materialize.min.css" />
-  <link rel="stylesheet" type="text/css" href="../../css/adapter.css" />
+  <!-- Admin assets (your system: iobroker.admin/adminWww) -->
+  <link rel="stylesheet" type="text/css" href="../../adapter/adminWww/lib/css/materialize.css" />
+  <link rel="stylesheet" type="text/css" href="../../adapter/adminWww/css/adapter.css" />
 
-  <script type="text/javascript" src="../../lib/js/jquery.min.js"></script>
-  <script type="text/javascript" src="../../lib/js/materialize.min.js"></script>
-  <script type="text/javascript" src="../../js/adapter-settings.js"></script>
+  <script type="text/javascript" src="../../adapter/adminWww/lib/js/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="../../adapter/adminWww/lib/js/materialize.js"></script>
+  <script type="text/javascript" src="../../adapter/adminWww/js/adapter-settings.js"></script>
 
   <style>
     /* dark-mode readability */
@@ -39,17 +40,17 @@
 
     <div class="row">
       <div class="input-field col s12">
-        <input class="value" id="baseUrl" type="text" />
+        <input class="value" id="baseUrl" type="text" placeholder="https://myschool.edupage.org" />
         <label for="baseUrl" class="translate">Base URL</label>
       </div>
 
       <div class="input-field col s12 m6">
-        <input class="value" id="username" type="text" />
+        <input class="value" id="username" type="text" autocomplete="username" />
         <label for="username" class="translate">Username</label>
       </div>
 
       <div class="input-field col s12 m6">
-        <input class="value" id="password" type="password" />
+        <input class="value" id="password" type="password" autocomplete="current-password" />
         <label for="password" class="translate">Password</label>
       </div>
 
@@ -75,17 +76,15 @@
   </div>
 
   <script type="text/javascript">
-    // Make absolutely sure Admin can see these globals
+    // expose explicitly so Admin Savebar works reliably
     window.onChangeFn = null;
 
     function markChanged() {
       if (window.onChangeFn) window.onChangeFn(true);
     }
 
-    // IMPORTANT: expose on window (Admin Savebar)
     window.load = function (settings, onChange) {
       window.onChangeFn = onChange;
-
       if (!settings) settings = {};
 
       // defaults only when missing
@@ -105,17 +104,10 @@
         }
       });
 
-      // change detection -> enables save
-      $('.value')
-        .off('change input keyup paste')
-        .on('change input keyup paste', markChanged);
-
-      // checkbox sometimes does not fire input on some UIs
+      $('.value').off('change input keyup paste').on('change input keyup paste', markChanged);
       $('#enableWeek').off('click').on('click', markChanged);
 
       if (window.onChangeFn) window.onChangeFn(false);
-
-      // update materialize labels (sometimes needs a tick)
       setTimeout(function () {
         if (window.M && M.updateTextFields) M.updateTextFields();
       }, 0);

@@ -2,11 +2,15 @@
 <html>
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EduPage</title>
 
-  <!-- ioBroker standard includes -->
+  <!-- Standard ioBroker Admin (Materialize) -->
+  <link rel="stylesheet" type="text/css" href="../../lib/css/materialize.css" />
   <link rel="stylesheet" type="text/css" href="../../css/adapter.css" />
+
   <script type="text/javascript" src="../../lib/js/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="../../lib/js/materialize.js"></script>
   <script type="text/javascript" src="../../js/adapter-settings.js"></script>
 </head>
 
@@ -57,12 +61,10 @@
   </div>
 
   <script type="text/javascript">
-    // IMPORTANT: must be global functions: load/save
     let onChangeFn;
 
     function load(settings, onChange) {
       onChangeFn = onChange;
-
       if (!settings) return;
 
       $('.value').each(function () {
@@ -76,14 +78,12 @@
         }
       });
 
-      // change detection (activates save button)
       $('.value').off('change input').on('change input', function () {
         onChangeFn(true);
       });
 
       onChange(false);
 
-      // Materialize labels update (Admin provides M)
       if (window.M && M.updateTextFields) M.updateTextFields();
     }
 

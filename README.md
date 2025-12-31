@@ -57,6 +57,8 @@ ioBroker js-controller and admin should be up to date
 ## Changelog
 ### 0.0.1
 - Initial release (alpha)
+### 0.0.2
+- login setup / testing
 
 ## License
 [MIT License. See LICENSE.](https://github.com/BassT23/ioBroker.edupage/tree/main?tab=MIT-1-ov-file#)

@@ -47,8 +47,6 @@
         "admin": ">=6.17.14"
       }
     ],
-    "protectedNative": ["password"],
-    "encryptedNative": ["password"]
   },
 
   "native": {
@@ -60,6 +58,8 @@
     "enableWeek": false
   },
 
+  "protectedNative": ["password"],
+  "encryptedNative": ["password"],
   "objects": [],
   "instanceObjects": []
 }

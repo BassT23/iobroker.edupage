@@ -55,7 +55,8 @@ Node.js >= 20 recommended
 ioBroker js-controller and admin should be up to date
 
 ## Changelog
-0.0.1 - Initial working version with jsonConfig-based admin UI
+### 0.0.1
+- Initial release (alpha)
 
 ## License
 [MIT License. See LICENSE.](https://github.com/BassT23/ioBroker.edupage/tree/main?tab=MIT-1-ov-file#)

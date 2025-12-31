@@ -1,5 +1,5 @@
 {
-  "name": "ioBroker.edupage",
+  "name": "iobroker.edupage",
   "version": "0.0.1",
   "description": "Fetch timetable and substitutions from EduPage",
   "author": "BassT23",
@@ -8,6 +8,27 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/BassT23/ioBroker.edupage.git"
+  },
+  "keywords": [
+    "iobroker",
+    "edupage",
+    "timetable",
+    "schedule",
+    "substitutions",
+    "school"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "admin/**",
+    "main.js",
+    "io-package.json",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node main.js --debug"
   },
   "dependencies": {
     "@iobroker/adapter-core": "^3.3.2",
@@ -18,26 +39,4 @@
   "devDependencies": {
     "@iobroker/testing": "^5.2.2"
   }
-  "scripts": {
-    "test": "node main.js --debug"
-  },
-  "license": "MIT",
-  "engines": {
-    "node": ">=20"
-  },
-  "keywords": [
-    "iobroker",
-    "edupage",
-    "timetable",
-    "schedule",
-    "substitutions",
-    "school"
-  ],
-  "files": [
-    "admin/**",
-    "main.js",
-    "io-package.json",
-    "LICENSE",
-    "README.md"
-  ]
 }

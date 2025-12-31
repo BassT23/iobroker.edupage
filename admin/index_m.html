@@ -2,185 +2,95 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EduPage</title>
-
   <style>
-    /* minimal fallback styling while we load libs */
-    .adapter-container { padding: 16px; }
-    .logo { width: 48px; height: 48px; }
-  </style>
-
-  <script>
-    // Try admin asset roots (some setups expose as /adapter/iobroker.admin/, others /adapter/admin/)
-    const roots = [
-      '/adapter/iobroker.admin/adminWww',  // common in newer setups
-      '/adapter/iobroker.admin',           // sometimes files are directly under it
-      '/adapter/admin'                     // older setups
-    ];
-
-    function addCss(href) {
-      return new Promise((resolve, reject) => {
-        const l = document.createElement('link');
-        l.rel = 'stylesheet';
-        l.href = href;
-        l.onload = resolve;
-        l.onerror = reject;
-        document.head.appendChild(l);
-      });
+    .adapter-container {
+      padding: 16px;
     }
-
-    function addJs(src) {
-      return new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.onload = resolve;
-        s.onerror = reject;
-        document.head.appendChild(s);
-      });
+    .logo {
+      width: 48px;
+      height: 48px;
     }
-
-    async function loadFromRoot(root) {
-      // Try materialize + adapter css
-      await addCss(root + '/lib/css/materialize.css');
-      await addCss(root + '/css/adapter.css');
-
-      // Try jquery + materialize + adapter-settings
-      await addJs(root + '/lib/js/jquery-3.2.1.min.js');
-      await addJs(root + '/lib/js/materialize.js');
-      await addJs(root + '/js/adapter-settings.js');
-    }
-
-    (async () => {
-      let ok = false;
-      for (const r of roots) {
-        try {
-          await loadFromRoot(r);
-          ok = true;
-          break;
-        } catch (e) {
-          // try next root
-        }
-      }
-      if (!ok) {
-        console.error('Could not load ioBroker admin assets from any known root', roots);
-      }
-    })();
-  </script>
-
-  <style>
-    /* dark-mode readability (applied once adapter.css/materialize loaded too) */
-    .adapter-container, .adapter-container * { color: rgba(255,255,255,0.88); }
-    .input-field input { color: rgba(255,255,255,0.9) !important; }
-    .input-field label { color: rgba(255,255,255,0.65) !important; }
-    .input-field input:focus + label { color: rgba(120,200,255,0.9) !important; }
-    input:not([type]):focus:not([readonly]),
-    input[type=text]:focus:not([readonly]),
-    input[type=password]:focus:not([readonly]),
-    input[type=number]:focus:not([readonly]) {
-      border-bottom: 1px solid rgba(120,200,255,0.85) !important;
-      box-shadow: 0 1px 0 0 rgba(120,200,255,0.85) !important;
+    .row {
+      margin-bottom: 12px;
     }
   </style>
 </head>
 
 <body>
-  <div class="m adapter-container">
+  <div class="adapter-container">
     <div class="row">
-      <div class="col s12">
-        <img src="edupage.png" class="logo" alt="edupage" />
-        <h5 class="translate">EduPage settings</h5>
-      </div>
+      <img src="edupage.png" class="logo" alt="edupage" />
+      <h5 class="translate">EduPage settings</h5>
     </div>
 
     <div class="row">
-      <div class="input-field col s12">
-        <input class="value" id="baseUrl" type="text" />
-        <label for="baseUrl" class="translate">Base URL</label>
-      </div>
+      <label class="translate">Base URL</label><br />
+      <input class="value" id="baseUrl" type="text" />
+    </div>
 
-      <div class="input-field col s12 m6">
-        <input class="value" id="username" type="text" />
-        <label for="username" class="translate">Username</label>
-      </div>
+    <div class="row">
+      <label class="translate">Username</label><br />
+      <input class="value" id="username" type="text" />
+    </div>
 
-      <div class="input-field col s12 m6">
-        <input class="value" id="password" type="password" />
-        <label for="password" class="translate">Password</label>
-      </div>
+    <div class="row">
+      <label class="translate">Password</label><br />
+      <input class="value" id="password" type="password" />
+    </div>
 
-      <div class="input-field col s12 m6">
-        <input class="value" id="intervalMin" type="number" min="5" />
-        <label for="intervalMin" class="translate">Refresh interval (minutes)</label>
-      </div>
+    <div class="row">
+      <label class="translate">Refresh interval (minutes)</label><br />
+      <input class="value" id="intervalMin" type="number" min="5" />
+    </div>
 
-      <div class="input-field col s12 m6">
-        <input class="value" id="maxLessons" type="number" min="6" />
-        <label for="maxLessons" class="translate">Max lessons per day</label>
-      </div>
+    <div class="row">
+      <label class="translate">Max lessons per day</label><br />
+      <input class="value" id="maxLessons" type="number" min="6" />
+    </div>
 
-      <div class="col s12">
-        <p>
-          <label>
-            <input class="value" id="enableWeek" type="checkbox" />
-            <span class="translate">Week view</span>
-          </label>
-        </p>
-      </div>
+    <div class="row">
+      <label>
+        <input class="value" id="enableWeek" type="checkbox" />
+        <span class="translate">Week view</span>
+      </label>
     </div>
   </div>
 
   <script>
-    // These MUST exist for Savebar. They will be called by adapter-settings.js once loaded.
-    window.onChangeFn = null;
+    // REQUIRED by ioBroker Admin
 
-    function markChanged() {
-      if (window.onChangeFn) window.onChangeFn(true);
-    }
-
-    window.load = function (settings, onChange) {
-      window.onChangeFn = onChange;
+    function load(settings, onChange) {
       if (!settings) settings = {};
 
-      if (settings.intervalMin === undefined) settings.intervalMin = 15;
-      if (settings.maxLessons === undefined) settings.maxLessons = 12;
-      if (settings.enableWeek === undefined) settings.enableWeek = false;
-
-      if (window.$) {
-        $('.value').each(function () {
-          const $el = $(this);
-          const id = $el.attr('id');
-          if ($el.attr('type') === 'checkbox') {
-            $el.prop('checked', !!settings[id]);
-          } else {
-            $el.val(settings[id] ?? '');
-          }
-        });
-
-        $('.value').off('change input keyup paste').on('change input keyup paste', markChanged);
-        $('#enableWeek').off('click').on('click', markChanged);
-      }
-
-      if (window.onChangeFn) window.onChangeFn(false);
-      setTimeout(() => { if (window.M && M.updateTextFields) M.updateTextFields(); }, 0);
-    };
-
-    window.save = function (callback) {
-      const obj = {};
-      $('.value').each(function () {
-        const $el = $(this);
-        const id = $el.attr('id');
-        if ($el.attr('type') === 'checkbox') {
-          obj[id] = $el.prop('checked');
-        } else if ($el.attr('type') === 'number') {
-          const raw = String($el.val() || '').trim();
-          obj[id] = raw === '' ? 0 : parseInt(raw, 10);
+      document.querySelectorAll('.value').forEach(el => {
+        const id = el.id;
+        if (el.type === 'checkbox') {
+          el.checked = !!settings[id];
         } else {
-          obj[id] = $el.val();
+          el.value = settings[id] ?? '';
+        }
+
+        el.addEventListener('change', () => onChange(true));
+        el.addEventListener('input', () => onChange(true));
+      });
+
+      onChange(false);
+    }
+
+    function save(callback) {
+      const obj = {};
+      document.querySelectorAll('.value').forEach(el => {
+        if (el.type === 'checkbox') {
+          obj[el.id] = el.checked;
+        } else if (el.type === 'number') {
+          obj[el.id] = el.value === '' ? 0 : parseInt(el.value, 10);
+        } else {
+          obj[el.id] = el.value;
         }
       });
       callback(obj);
-    };
+    }
   </script>
 </body>
 </html>

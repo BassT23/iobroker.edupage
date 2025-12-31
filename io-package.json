@@ -29,6 +29,8 @@
     "connectionType": "cloud",
     "dataSource": "push",
     "tier": 2,
+
+    "admin": "admin/index_m.html",
     "adminUI": {
       "config": "html"
     }

@@ -5,13 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EduPage</title>
 
-  <!-- Standard ioBroker Admin (Materialize) -->
   <link rel="stylesheet" type="text/css" href="../../lib/css/materialize.css" />
   <link rel="stylesheet" type="text/css" href="../../css/adapter.css" />
 
   <script type="text/javascript" src="../../lib/js/jquery-3.2.1.min.js"></script>
   <script type="text/javascript" src="../../lib/js/materialize.js"></script>
   <script type="text/javascript" src="../../js/adapter-settings.js"></script>
+
+  <style>
+    /* dark-mode readability */
+    .adapter-container, .adapter-container * { color: rgba(255,255,255,0.88); }
+    .input-field input { color: rgba(255,255,255,0.9) !important; }
+    .input-field label { color: rgba(255,255,255,0.65) !important; }
+    .input-field input:focus + label { color: rgba(120,200,255,0.9) !important; }
+    input:not([type]):focus:not([readonly]),
+    input[type=text]:focus:not([readonly]),
+    input[type=password]:focus:not([readonly]),
+    input[type=number]:focus:not([readonly]) {
+      border-bottom: 1px solid rgba(120,200,255,0.85) !important;
+      box-shadow: 0 1px 0 0 rgba(120,200,255,0.85) !important;
+    }
+  </style>
 </head>
 
 <body>
@@ -25,7 +39,7 @@
 
     <div class="row">
       <div class="input-field col s12">
-        <input class="value" id="baseUrl" type="text" placeholder="https://myschool.edupage.org" />
+        <input class="value" id="baseUrl" type="text" />
         <label for="baseUrl" class="translate">Base URL</label>
       </div>
 
@@ -61,15 +75,23 @@
   </div>
 
   <script type="text/javascript">
-    let onChangeFn;
+    // must be global
+    var onChangeFn;
 
     function load(settings, onChange) {
       onChangeFn = onChange;
-      if (!settings) return;
+
+      if (!settings) settings = {};
+
+      // sensible defaults ONLY if not set yet
+      if (settings.baseUrl === undefined) settings.baseUrl = '';
+      if (settings.intervalMin === undefined) settings.intervalMin = 15;
+      if (settings.maxLessons === undefined) settings.maxLessons = 12;
+      if (settings.enableWeek === undefined) settings.enableWeek = false;
 
       $('.value').each(function () {
-        const $el = $(this);
-        const id = $el.attr('id');
+        var $el = $(this);
+        var id = $el.attr('id');
 
         if ($el.attr('type') === 'checkbox') {
           $el.prop('checked', !!settings[id]);
@@ -78,26 +100,26 @@
         }
       });
 
+      // change detection (save button)
       $('.value').off('change input').on('change input', function () {
-        onChangeFn(true);
+        if (onChangeFn) onChangeFn(true);
       });
 
-      onChange(false);
-
+      if (onChangeFn) onChangeFn(false);
       if (window.M && M.updateTextFields) M.updateTextFields();
     }
 
     function save(callback) {
-      const obj = {};
+      var obj = {};
 
       $('.value').each(function () {
-        const $el = $(this);
-        const id = $el.attr('id');
+        var $el = $(this);
+        var id = $el.attr('id');
 
         if ($el.attr('type') === 'checkbox') {
           obj[id] = $el.prop('checked');
         } else if ($el.attr('type') === 'number') {
-          const raw = String($el.val() || '').trim();
+          var raw = String($el.val() || '').trim();
           obj[id] = raw === '' ? 0 : parseInt(raw, 10);
         } else {
           obj[id] = $el.val();

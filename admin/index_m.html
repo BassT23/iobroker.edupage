@@ -4,23 +4,31 @@
   <meta charset="UTF-8">
   <title>EduPage</title>
 
-  <!-- ioBroker Admin injects CSS + JS automatically -->
-  <script type="text/javascript" src="../../adminWww/js/adapter-settings.js"></script>
+  <!-- MUST be absolute, NOT relative -->
+  <script src="/adminWww/js/adapter-settings.js"></script>
 
   <style>
-    /* keep it minimal – admin handles dark/light */
+    .adapter-container {
+      max-width: 700px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
     .logo {
       width: 64px;
       height: 64px;
       margin-right: 16px;
     }
-    .header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 24px;
+    label {
+      display: block;
+      margin-top: 12px;
     }
-    .row {
-      max-width: 700px;
+    input[type="text"],
+    input[type="password"],
+    input[type="number"] {
+      width: 100%;
     }
   </style>
 </head>
@@ -28,62 +36,59 @@
 <body>
   <div class="adapter-container">
     <div class="header">
-      <img src="edupage.png" class="logo" />
+      <img src="edupage.png" class="logo">
       <h5 class="translate">EduPage settings</h5>
     </div>
 
-    <div class="row">
-      <label class="translate" for="baseUrl">Base URL</label>
-      <input class="value" id="baseUrl" type="text" />
+    <label class="translate">Base URL</label>
+    <input class="value" id="baseUrl" type="text">
 
-      <label class="translate" for="username">Username</label>
-      <input class="value" id="username" type="text" />
+    <label class="translate">Username</label>
+    <input class="value" id="username" type="text">
 
-      <label class="translate" for="password">Password</label>
-      <input class="value" id="password" type="password" />
+    <label class="translate">Password</label>
+    <input class="value" id="password" type="password">
 
-      <label class="translate" for="intervalMin">Refresh interval (minutes)</label>
-      <input class="value" id="intervalMin" type="number" min="5" />
+    <label class="translate">Refresh interval (minutes)</label>
+    <input class="value" id="intervalMin" type="number" min="5">
 
-      <label class="translate" for="maxLessons">Max lessons per day</label>
-      <input class="value" id="maxLessons" type="number" min="6" />
+    <label class="translate">Max lessons per day</label>
+    <input class="value" id="maxLessons" type="number" min="6">
 
-      <p>
-        <label>
-          <input class="value" id="enableWeek" type="checkbox" />
-          <span class="translate">Week view</span>
-        </label>
-      </p>
-    </div>
+    <p>
+      <label>
+        <input class="value" id="enableWeek" type="checkbox">
+        <span class="translate">Week view</span>
+      </label>
+    </p>
   </div>
 
   <script>
     function load(settings, onChange) {
       settings = settings || {};
 
-      $('.value').each(function () {
-        const id = this.id;
-        if (this.type === 'checkbox') {
-          this.checked = !!settings[id];
+      document.querySelectorAll('.value').forEach(el => {
+        if (el.type === 'checkbox') {
+          el.checked = !!settings[el.id];
         } else {
-          this.value = settings[id] ?? '';
+          el.value = settings[el.id] ?? '';
         }
+        el.addEventListener('change', () => onChange(true));
+        el.addEventListener('input', () => onChange(true));
       });
 
-      $('.value').on('change input', () => onChange(true));
       onChange(false);
     }
 
     function save(callback) {
       const obj = {};
-      $('.value').each(function () {
-        const id = this.id;
-        if (this.type === 'checkbox') {
-          obj[id] = this.checked;
-        } else if (this.type === 'number') {
-          obj[id] = parseInt(this.value, 10) || 0;
+      document.querySelectorAll('.value').forEach(el => {
+        if (el.type === 'checkbox') {
+          obj[el.id] = el.checked;
+        } else if (el.type === 'number') {
+          obj[el.id] = parseInt(el.value, 10) || 0;
         } else {
-          obj[id] = this.value;
+          obj[el.id] = el.value;
         }
       });
       callback(obj);

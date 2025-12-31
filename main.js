@@ -440,8 +440,6 @@ class Edupage extends utils.Adapter {
     }
   }
 
-'use strict';
-
 const utils = require('@iobroker/adapter-core');
 const axios = require('axios').default;
 const { CookieJar } = require('tough-cookie');

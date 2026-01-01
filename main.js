@@ -6,9 +6,12 @@ const { CookieJar } = require('tough-cookie');
 const { wrapper } = require('axios-cookiejar-support');
 const crypto = require('crypto');
 
+const { EdupageClient } = require('./lib/edupageClient');
+
 class Edupage extends utils.Adapter {
   constructor(options) {
     super({ ...options, name: 'edupage' });
+
     this.on('ready', this.onReady.bind(this));
     this.on('unload', this.onUnload.bind(this));
 
@@ -19,8 +22,8 @@ class Edupage extends utils.Adapter {
       timeout: 20000,
       headers: {
         'User-Agent': 'ioBroker.edupage/0.0.1',
-        'Accept': 'application/json, text/plain, */*'
-      }
+        'Accept': 'application/json, text/plain, */*',
+      },
     }));
 
     this.timer = null;
@@ -31,7 +34,11 @@ class Edupage extends utils.Adapter {
     this.setState('info.connection', false, true);
 
     const baseUrl = (this.config.baseUrl || '').trim().replace(/\/+$/, '');
-    if (!baseUrl) return this.log.error('Please set baseUrl (e.g. https://myschool.edupage.org)');
+    if (!baseUrl) {
+      this.log.error('Please set baseUrl (e.g. https://myschool.edupage.org)');
+      return;
+    }
+
     if (!this.config.username || !this.config.password) {
       this.log.warn('No username/password set yet. Adapter stays idle until configured.');
       return;
@@ -54,8 +61,10 @@ class Edupage extends utils.Adapter {
       ['meta.lastHash', 'string', 'Hash of last model'],
       ['meta.changedSinceLastSync', 'boolean', 'Changed since last sync'],
       ['meta.lastError', 'string', 'Last error message'],
+
       ['today.date', 'string', 'Today date'],
       ['tomorrow.date', 'string', 'Tomorrow date'],
+
       ['next.when', 'string', 'today|tomorrow'],
       ['next.subject', 'string', 'Next subject'],
       ['next.room', 'string', 'Next room'],
@@ -64,14 +73,14 @@ class Edupage extends utils.Adapter {
       ['next.end', 'string', 'Next end'],
       ['next.changed', 'boolean', 'Next changed'],
       ['next.canceled', 'boolean', 'Next canceled'],
-      ['next.changeText', 'string', 'Next change text']
+      ['next.changeText', 'string', 'Next change text'],
     ];
 
     for (const [id, type, name] of defs) {
       await this.setObjectNotExistsAsync(id, {
         type: 'state',
         common: { name, type, role: 'value', read: true, write: false },
-        native: {}
+        native: {},
       });
     }
 
@@ -92,15 +101,25 @@ class Edupage extends utils.Adapter {
       ['teacher', 'string', 'Teacher'],
       ['changed', 'boolean', 'Changed'],
       ['canceled', 'boolean', 'Canceled'],
-      ['changeText', 'string', 'Change text']
+      ['changeText', 'string', 'Change text'],
     ];
 
     for (const [id, type, name] of defs) {
       await this.setObjectNotExistsAsync(`${base}.${id}`, {
         type: 'state',
         common: { name, type, role: 'value', read: true, write: false },
-        native: {}
+        native: {},
       });
+    }
+  }
+
+  getSchoolIdFromBaseUrl(baseUrl) {
+    try {
+      const u = new URL(baseUrl);
+      // rs-kollnau.edupage.org -> rs-kollnau
+      return (u.hostname || '').split('.')[0] || '';
+    } catch {
+      return '';
     }
   }
 
@@ -108,9 +127,45 @@ class Edupage extends utils.Adapter {
     try {
       await this.setStateAsync('meta.lastError', '', true);
 
-      // Login/session handling will be implemented once we have the real endpoints.
-      // For now, just write empty model so VIS schema exists.
+      const schoolId = this.getSchoolIdFromBaseUrl(baseUrl);
+      if (!schoolId) throw new Error('Cannot derive school id from baseUrl');
 
+      const client = new EdupageClient({
+        http: this.http,
+        baseUrl,
+        log: this.log,
+        // optional: you can pass schoolId into client too
+      });
+
+      // 1) getToken
+      const tokRes = await client.getToken({
+        username: this.config.username,
+        edupage: schoolId,
+      });
+
+      if (!tokRes?.token) {
+        throw new Error(tokRes?.err?.error_text || 'No token from getToken');
+      }
+
+      // 2) login
+      const loginRes = await client.login({
+        username: this.config.username,
+        password: this.config.password,
+        edupage: schoolId,
+        userToken: tokRes.token,
+        ctxt: '',
+        tu: null,
+        gu: null,
+        au: null,
+      });
+
+      if (loginRes?.status !== 'OK') {
+        const needCaptcha = loginRes?.needCaptcha === '1';
+        const captchaInfo = needCaptcha ? ` (captcha required, open UI and login once)` : '';
+        throw new Error((loginRes?.err?.error_text || 'Login failed') + captchaInfo);
+      }
+
+      // For now: keep schema alive with an empty model
       const model = this.emptyModel();
       await this.writeModel(model);
 
@@ -132,9 +187,9 @@ class Edupage extends utils.Adapter {
     const today = new Date();
     const tomorrow = new Date(Date.now() + 86400000);
     return {
-      today: { date: today.toISOString().slice(0,10), lessons: [] },
-      tomorrow: { date: tomorrow.toISOString().slice(0,10), lessons: [] },
-      next: null
+      today: { date: today.toISOString().slice(0, 10), lessons: [] },
+      tomorrow: { date: tomorrow.toISOString().slice(0, 10), lessons: [] },
+      next: null,
     };
   }
 

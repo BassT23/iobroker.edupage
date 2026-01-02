@@ -196,10 +196,6 @@ class Edupage extends utils.Adapter {
 
       // 3) warmup timetable
       await this.eduClient.warmUpTimetable({ guPath });
-      // repeat timetable view once (some instances set context cookies on 2nd hit)
-      await this.http.get(this.getDashboardTimetableRefererPath(), {
-        headers: { Accept: 'text/html,*/*', Referer: dashRef },
-      }).catch(() => {});
 
       // 4) dates
       const model = this.emptyModel();

@@ -2,7 +2,7 @@
   "json.schemas": [
     {
       "fileMatch": ["io-package.json"],
-      "url": "https://json.schemastore.org/iobroker-adapter"
+      "url": "https://raw.githubusercontent.com/ioBroker/ioBroker.js-controller/master/schemas/io-package.json"
     },
     {
       "fileMatch": [

@@ -220,24 +220,23 @@ class Edupage extends utils.Adapter {
         return;
       }
 
-      // 6) _gsh
+      // 6) _gsh: config or auto
       let gsh = gshCfg;
       if (!gsh) {
         gsh = await this.eduClient.getGsh({ guPath });
       }
-      if (!gsh) {
-        throw new Error('Could not determine _gsh. Please set it in adapter config (from DevTools).');
-      }
 
       // 7) timetable call (with proper Referer/Origin)
 
-      // IMPORTANT: EduPage expects "year" from dateFrom, not from "today"
+      // IMPORTANT: EduPage expects negative student id for table="students"
+      const sid = Number(studentId);
+      const eduId = sid > 0 ? String(-sid) : String(sid);
+
+      // IMPORTANT: EduPage expects "year" from dateFrom (week crossing year boundary)
       const yyyy = Number(String(dateFrom).slice(0, 4)) || new Date().getFullYear();
 
       // DEBUG: make sure payload matches browser request
-      this.log.warn(
-        `TT payload check: year=${yyyy} datefrom=${dateFrom} dateto=${dateTo} id=${eduId}`
-      );
+      this.log.warn(`TT payload check: year=${yyyy} datefrom=${dateFrom} dateto=${dateTo} id=${eduId}`);
 
       const args = [
         null,
@@ -254,7 +253,7 @@ class Edupage extends utils.Adapter {
         },
       ];
 
-      let ttRes = await this.eduClient.currentttGetData({ args, gsh, guPath });
+      const ttRes = await this.eduClient.currentttGetData({ args, gsh, guPath });
 
       // If EduPage returns reload-only, the context/_gsh is likely wrong -> refresh and retry once
       const hasReloadOnly = ttRes && typeof ttRes === 'object' && 'reload' in ttRes && !('r' in ttRes);

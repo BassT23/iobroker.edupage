@@ -34,7 +34,7 @@
       "type": "text",
       "label": "cfg_studentId",
       "help": "cfg_studentId_help",
-      "placeholder": "-2528",
+      "placeholder": "1234",
       "xs": 12,
       "sm": 6,
       "md": 6,

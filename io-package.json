@@ -1,14 +1,32 @@
 {
   "common": {
     "name": "edupage",
-    "version": "0.0.3",
+    "version": "0.0.2",
     "titleLang": {
       "en": "EduPage",
-      "de": "EduPage"
+      "de": "EduPage",
+      "ru": "EduPage",
+      "pt": "EduPage",
+      "nl": "EduPage",
+      "fr": "EduPage",
+      "it": "EduPage",
+      "es": "EduPage",
+      "pl": "EduPage",
+      "uk": "EduPage",
+      "zh-cn": "EduPage"
     },
     "desc": {
       "en": "Fetch timetable and substitutions from EduPage",
-      "de": "Stundenplan und Vertretungen aus EduPage abrufen"
+      "de": "Stundenplan und Vertretungen aus EduPage abrufen",
+      "ru": "Fetch timetable and substitutions from EduPage",
+      "pt": "Fetch timetable and substitutions from EduPage",
+      "nl": "Fetch timetable and substitutions from EduPage",
+      "fr": "Fetch timetable and substitutions from EduPage",
+      "it": "Fetch timetable and substitutions from EduPage",
+      "es": "Fetch timetable and substitutions from EduPage",
+      "pl": "Fetch timetable and substitutions from EduPage",
+      "uk": "Fetch timetable and substitutions from EduPage",
+      "zh-cn": "Fetch timetable and substitutions from EduPage"
     },
     "authors": ["BassT23"],
     "licenseInformation": {
@@ -34,11 +52,29 @@
     "news": {
       "0.0.1": {
         "en": "Initial working version with jsonConfig-based admin UI",
-        "de": "Erste funktionierende Version mit jsonConfig Admin-UI"
+        "de": "Erste funktionierende Version mit jsonConfig Admin-UI",
+        "ru": "Initial working version with jsonConfig-based admin UI",
+        "pt": "Initial working version with jsonConfig-based admin UI",
+        "nl": "Initial working version with jsonConfig-based admin UI",
+        "fr": "Initial working version with jsonConfig-based admin UI",
+        "it": "Initial working version with jsonConfig-based admin UI",
+        "es": "Initial working version with jsonConfig-based admin UI",
+        "pl": "Initial working version with jsonConfig-based admin UI",
+        "uk": "Initial working version with jsonConfig-based admin UI",
+        "zh-cn": "Initial working version with jsonConfig-based admin UI"
       },
       "0.0.2": {
-        "en": "Build connection to edupage",
-        "de": "Anmeldung bei edupage erstellt"
+        "en": "Build connection to EduPage",
+        "de": "Anmeldung bei EduPage erstellt",
+        "ru": "Build connection to EduPage",
+        "pt": "Build connection to EduPage",
+        "nl": "Build connection to EduPage",
+        "fr": "Build connection to EduPage",
+        "it": "Build connection to EduPage",
+        "es": "Build connection to EduPage",
+        "pl": "Build connection to EduPage",
+        "uk": "Build connection to EduPage",
+        "zh-cn": "Build connection to EduPage"
       }
     },
     "dependencies": [
@@ -52,7 +88,6 @@
       }
     ]
   },
-
   "native": {
     "baseUrl": "",
     "username": "",
@@ -61,7 +96,6 @@
     "maxLessons": 12,
     "enableWeek": false
   },
-
   "protectedNative": ["password"],
   "encryptedNative": ["password"],
   "objects": [],

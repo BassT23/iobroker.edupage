@@ -72,6 +72,10 @@ class Edupage extends utils.Adapter {
 
       ['today.ferien', 'string', 'Holiday/event text if present (today)'],
       ['tomorrow.ferien', 'string', 'Holiday/event text if present (tomorrow)'],
+      ['today.holiday', 'boolean', 'Holiday active today'],
+      ['today.holidayName', 'string', 'Holiday name/event text today'],
+      ['tomorrow.holiday', 'boolean', 'Holiday active tomorrow'],
+      ['tomorrow.holidayName', 'string', 'Holiday name/event text tomorrow'],
 
       ['next.when', 'string', 'today|tomorrow|week'],
       ['next.subject', 'string', 'Next subject'],
@@ -281,8 +285,20 @@ class Edupage extends utils.Adapter {
     const today = new Date();
     const tomorrow = new Date(Date.now() + 86400000);
     return {
-      today: { date: today.toISOString().slice(0, 10), lessons: [], ferien: '' },
-      tomorrow: { date: tomorrow.toISOString().slice(0, 10), lessons: [], ferien: '' },
+      today: {
+        date: today.toISOString().slice(0, 10),
+        lessons: [],
+        ferien: '',
+        holiday: false,
+        holidayName: '',
+      },
+      tomorrow: {
+        date: tomorrow.toISOString().slice(0, 10),
+        lessons: [],
+        ferien: '',
+        holiday: false,
+        holidayName: '',
+      },
       next: null,
     };
   }
@@ -298,17 +314,49 @@ class Edupage extends utils.Adapter {
         if (!byDateEvent.has(it.date)) byDateEvent.set(it.date, it.name);
       }
     }
+
+    // existing string states
     model.today.ferien = byDateEvent.get(model.today.date) || '';
     model.tomorrow.ferien = byDateEvent.get(model.tomorrow.date) || '';
 
+    // holiday detection: event present AND looks like holiday
+    const isHolidayText = (txt) => {
+      const t = String(txt || '').toLowerCase();
+      // matches common DE + EN
+      return (
+        t.includes('ferien') ||
+        t.includes('holiday') ||
+        t.includes('vacation') ||
+        t.includes('break') ||
+        t.includes('school closed') ||
+        t.includes('frei') ||
+        t.includes('unterrichtsfrei')
+      );
+    };
+
+    const todayTxt = model.today.ferien;
+    const tomorrowTxt = model.tomorrow.ferien;
+
+    model.today.holiday = !!todayTxt && isHolidayText(todayTxt);
+    model.today.holidayName = model.today.holiday ? todayTxt : '';
+
+    model.tomorrow.holiday = !!tomorrowTxt && isHolidayText(tomorrowTxt);
+    model.tomorrow.holidayName = model.tomorrow.holiday ? tomorrowTxt : '';
+
     return model;
   }
+
 
   async writeModel(model) {
     await this.setStateAsync('today.date', model.today.date, true);
     await this.setStateAsync('tomorrow.date', model.tomorrow.date, true);
     await this.setStateAsync('today.ferien', model.today.ferien || '', true);
     await this.setStateAsync('tomorrow.ferien', model.tomorrow.ferien || '', true);
+
+    await this.setStateAsync('today.holiday', !!model.today.holiday, true);
+    await this.setStateAsync('today.holidayName', model.today.holidayName || '', true);
+    await this.setStateAsync('tomorrow.holiday', !!model.tomorrow.holiday, true);
+    await this.setStateAsync('tomorrow.holidayName', model.tomorrow.holidayName || '', true);
 
     const n = model.next || {};
     await this.setStateAsync('next.when', n.when || '', true);
@@ -321,6 +369,7 @@ class Edupage extends utils.Adapter {
     await this.setStateAsync('next.canceled', !!n.canceled, true);
     await this.setStateAsync('next.changeText', n.changeText || '', true);
   }
+
 
   onUnload(callback) {
     try {

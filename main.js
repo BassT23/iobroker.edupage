@@ -19,11 +19,13 @@ class Edupage extends utils.Adapter {
   }
 
   async onReady() {
-    this.setState('info.connection', false, true);
+    // Make sure we always see something on startup
+    this.log.info('Edupage adapter starting onReady()');
+
+    await this.setStateAsync('info.connection', false, true);
 
     const baseUrl = (this.config.baseUrl || '').trim().replace(/\/+$/, '');
     if (!baseUrl) {
-      // do not show private school name in example
       this.log.error('Please set baseUrl (e.g. https://myschool.edupage.org)');
       return;
     }
@@ -33,6 +35,7 @@ class Edupage extends utils.Adapter {
       return;
     }
 
+    // do not log real school name, only if it matches *.edupage.org
     const m = baseUrl.match(/^https?:\/\/([^./]+)\.edupage\.org/i);
     const schoolSubdomain = m?.[1] || '';
 
@@ -40,20 +43,26 @@ class Edupage extends utils.Adapter {
     const intervalMin = Math.max(5, Number(this.config.intervalMin || 15));
     const weekView = !!this.config.enableWeek;
 
+    this.log.info(
+      `Config: baseUrl=${m ? 'https://myschool.edupage.org' : '[custom]'} intervalMin=${intervalMin} maxLessons=${this.maxLessons} weekView=${weekView}`
+    );
+
     await this.ensureStates();
 
     this.eduHttp = new EdupageHttp({ baseUrl, log: this.log });
     this.eduClient = new EdupageClient({ http: this.eduHttp, log: this.log });
 
-    await this.syncOnce({ schoolSubdomain, weekView }).catch(e =>
-      this.log.warn(`Initial sync failed: ${e?.message || e}`)
-    );
+    await this.syncOnce({ schoolSubdomain, weekView }).catch(e => {
+      this.log.warn(`Initial sync failed: ${e?.message || e}`);
+    });
 
     this.timer = setInterval(() => {
-      this.syncOnce({ schoolSubdomain, weekView }).catch(e =>
-        this.log.warn(`Sync failed: ${e?.message || e}`)
-      );
+      this.syncOnce({ schoolSubdomain, weekView }).catch(e => {
+        this.log.warn(`Sync failed: ${e?.message || e}`);
+      });
     }, intervalMin * 60 * 1000);
+
+    this.log.info(`Scheduler active: every ${intervalMin} minutes`);
   }
 
   async ensureStates() {
@@ -85,14 +94,14 @@ class Edupage extends utils.Adapter {
       ['next.end', 'string', 'Next end'],
       ['next.changed', 'boolean', 'Next changed'],
       ['next.canceled', 'boolean', 'Next canceled'],
-      ['next.changeText', 'string', 'Next change text'],
+      ['next.changeText', 'string', 'Next change text']
     ];
 
     for (const [id, type, name] of defs) {
       await this.setObjectNotExistsAsync(id, {
         type: 'state',
         common: { name, type, role: 'value', read: true, write: false },
-        native: {},
+        native: {}
       });
     }
 
@@ -115,14 +124,14 @@ class Edupage extends utils.Adapter {
       ['changed', 'boolean', 'Changed'],
       ['canceled', 'boolean', 'Canceled'],
       ['changeText', 'string', 'Change text'],
-      ['type', 'string', 'lesson|event'],
+      ['type', 'string', 'lesson|event']
     ];
 
     for (const [id, type, name] of defs) {
       await this.setObjectNotExistsAsync(`${base}.${id}`, {
         type: 'state',
         common: { name, type, role: 'value', read: true, write: false },
-        native: {},
+        native: {}
       });
     }
   }
@@ -142,16 +151,16 @@ class Edupage extends utils.Adapter {
       const studentId = (this.config.studentId ?? '').toString().trim();
       const gshCfg = (this.config.gsh ?? '').toString().trim();
 
+      this.log.info(`Sync start (weekView=${weekView}). studentId set: ${studentId ? 'yes' : 'no'}`);
+
       // 0) getData
       const md = await this.eduClient.getLoginData().catch(() => null);
-
-      // Option A: gu IMMER verfügbar machen (fallback)
       const guPath = (md?.gu && String(md.gu)) ? String(md.gu) : this.eduClient.getTimetableRefererPath();
 
       // 1) token
       const tokRes = await this.eduClient.getToken({
         username: this.config.username,
-        edupage: schoolSubdomain,
+        edupage: schoolSubdomain
       });
       if (!tokRes?.token) throw new Error(tokRes?.err?.error_text || 'No token');
 
@@ -163,8 +172,8 @@ class Edupage extends utils.Adapter {
         edupage: schoolSubdomain,
         ctxt: '',
         tu: md?.tu ?? null,
-        gu: guPath,          // <-- IMPORTANT
-        au: md?.au ?? null,
+        gu: guPath,
+        au: md?.au ?? null
       });
 
       const errText = loginRes?.err?.error_text || '';
@@ -180,7 +189,7 @@ class Edupage extends utils.Adapter {
         throw new Error(loginRes?.err?.error_text || 'Login failed');
       }
 
-      // 3) warmup timetable (sets context; also helps _gsh extraction)
+      // 3) warmup timetable
       await this.eduClient.warmUpTimetable({ guPath });
 
       // 4) dates
@@ -206,18 +215,21 @@ class Edupage extends utils.Adapter {
       // 5) studentId required
       if (!studentId) {
         this.log.warn('No studentId set yet. Please add it in adapter settings (example: 1234).');
-        this.setState('info.connection', true, true);
         await this.setStateAsync('meta.lastSync', Date.now(), true);
+        await this.setStateAsync('info.connection', true, true);
         return;
       }
 
-      // 6) _gsh: config or auto
+      // 6) _gsh
       let gsh = gshCfg;
       if (!gsh) {
         gsh = await this.eduClient.getGsh({ guPath });
       }
+      if (!gsh) {
+        throw new Error('Could not determine _gsh. Please set it in adapter config (from DevTools).');
+      }
 
-      // 7) timetable call (with proper Referer/Origin)
+      // 7) timetable call
       const yyyy = new Date().getFullYear();
       const args = [
         null,
@@ -230,21 +242,48 @@ class Edupage extends utils.Adapter {
           showColors: true,
           showIgroupsInClasses: false,
           showOrig: true,
-          log_module: 'CurrentTTView',
-        },
+          log_module: 'CurrentTTView'
+        }
       ];
 
       const ttRes = await this.eduClient.currentttGetData({ args, gsh, guPath });
 
+      // lightweight diagnostics (no sensitive data)
+      try {
+        const topKeys = Object.keys(ttRes || {});
+        const r = ttRes?.r || ttRes?.data?.r || {};
+        const rKeys = Object.keys(r || {});
+        const items = r?.ttitems || r?.eventitems || r?.events || r?.items || [];
+        const count = Array.isArray(items) ? items.length : -1;
+        const sample = Array.isArray(items) ? items.slice(0, 2) : [];
+        this.log.info(`TT keys: ${topKeys.join(', ')}`);
+        this.log.info(`TT.r keys: ${rKeys.join(', ')}`);
+        this.log.info(`TT items count: ${count}`);
+        if (count === 0) {
+          this.log.warn('TT items are empty. This can happen in holidays OR if we read the wrong response path.');
+        }
+        if (sample.length) {
+          // sample can include IDs; keep it short and allow you to anonymize if you paste it
+          this.log.debug(`TT sample(2): ${JSON.stringify(sample)}`);
+        }
+      } catch {
+        // ignore diagnostics errors
+      }
+
       const parsed = this.parseCurrentTt(ttRes);
       await this.writeModel(parsed);
 
-      this.setState('info.connection', true, true);
+      await this.setStateAsync('info.connection', true, true);
       await this.setStateAsync('meta.lastSync', Date.now(), true);
+
+      this.log.info(
+        `Sync done. today.ferien="${parsed.today.ferien || ''}" today.holiday=${parsed.today.holiday} tomorrow.ferien="${parsed.tomorrow.ferien || ''}" tomorrow.holiday=${parsed.tomorrow.holiday}`
+      );
     } catch (e) {
       const msg = String(e?.message || e);
       await this.setStateAsync('meta.lastError', msg, true);
-      this.setState('info.connection', false, true);
+      await this.setStateAsync('info.connection', false, true);
+      this.log.error(`Sync error: ${msg}`);
       throw e;
     }
   }
@@ -268,7 +307,9 @@ class Edupage extends utils.Adapter {
         `Captcha nötig / verdächtige Aktivität erkannt. Öffne diese URL im Browser, gib das Passwort erneut ein und tippe den Text aus dem Bild ein: ${captchaUrl}`
       );
     } else {
-      this.log.error('Captcha nötig / verdächtige Aktivität erkannt. Bitte im Browser bei EduPage erneut anmelden und Captcha lösen.');
+      this.log.error(
+        'Captcha nötig / verdächtige Aktivität erkannt. Bitte im Browser bei EduPage erneut anmelden und Captcha lösen.'
+      );
     }
 
     if (this.stopOnCaptcha) {
@@ -290,90 +331,102 @@ class Edupage extends utils.Adapter {
         lessons: [],
         ferien: '',
         holiday: false,
-        holidayName: '',
+        holidayName: ''
       },
       tomorrow: {
         date: tomorrow.toISOString().slice(0, 10),
         lessons: [],
         ferien: '',
         holiday: false,
-        holidayName: '',
+        holidayName: ''
       },
-      next: null,
+      next: null
     };
   }
 
-parseCurrentTt(ttRes) {
-  const model = this.emptyModel();
-  const r = ttRes?.r || ttRes?.data?.r || ttRes || {};
+  normalizeDate(d) {
+    if (!d) return '';
+    const s = String(d).trim();
 
-  // try multiple containers (EduPage varies)
-  const items =
-    r?.ttitems ||
-    r?.eventitems ||
-    r?.events ||
-    r?.items ||
-    [];
+    // ISO already
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-  const getText = (it) => it?.name || it?.title || it?.caption || it?.text || '';
-  const getType = (it) => String(it?.type || '').toLowerCase();
+    // "YYYY-MM-DDTHH:MM:SS..." -> slice
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10);
 
-  const isHolidayText = (txt) => {
-    const t = String(txt || '').toLowerCase();
-    return (
-      t.includes('ferien') ||
-      t.includes('holiday') ||
-      t.includes('vacation') ||
-      t.includes('break') ||
-      t.includes('school closed') ||
-      t.includes('frei') ||
-      t.includes('unterrichtsfrei')
-    );
-  };
-
-  // map single-date events
-  const byDateEvent = new Map();
-
-  for (const it of items) {
-    const type = getType(it);
-    const txt = getText(it);
-    if (!txt) continue;
-
-    // 1) single date event
-    if (it?.date && (type === 'event' || type === 'holiday' || type === 'dayevent')) {
-      const d = String(it.date);
-      if (!byDateEvent.has(d)) byDateEvent.set(d, txt);
-      continue;
+    // "DD.MM.YYYY" -> ISO
+    const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (m) {
+      const [, dd, mm, yyyy] = m;
+      return `${yyyy}-${mm}-${dd}`;
     }
 
-    // 2) ranged event: datefrom/dateto (inclusive)
-    if (it?.datefrom && it?.dateto && (type === 'event' || type === 'holiday')) {
-      const from = String(it.datefrom).slice(0, 10);
-      const to = String(it.dateto).slice(0, 10);
-
-      // only care about today/tomorrow here
-      if (model.today.date >= from && model.today.date <= to) {
-        if (!byDateEvent.has(model.today.date)) byDateEvent.set(model.today.date, txt);
-      }
-      if (model.tomorrow.date >= from && model.tomorrow.date <= to) {
-        if (!byDateEvent.has(model.tomorrow.date)) byDateEvent.set(model.tomorrow.date, txt);
-      }
-    }
+    return s;
   }
 
-  // existing string states
-  model.today.ferien = byDateEvent.get(model.today.date) || '';
-  model.tomorrow.ferien = byDateEvent.get(model.tomorrow.date) || '';
+  parseCurrentTt(ttRes) {
+    const model = this.emptyModel();
+    const r = ttRes?.r || ttRes?.data?.r || ttRes || {};
 
-  // holiday boolean + name
-  model.today.holiday = !!model.today.ferien && isHolidayText(model.today.ferien);
-  model.today.holidayName = model.today.holiday ? model.today.ferien : '';
+    const items = r?.ttitems || r?.eventitems || r?.events || r?.items || [];
 
-  model.tomorrow.holiday = !!model.tomorrow.ferien && isHolidayText(model.tomorrow.ferien);
-  model.tomorrow.holidayName = model.tomorrow.holiday ? model.tomorrow.ferien : '';
+    const getText = it => it?.name || it?.title || it?.caption || it?.text || '';
+    const getType = it => String(it?.type || '').toLowerCase();
 
-  return model;
-}
+    const isHolidayText = txt => {
+      const t = String(txt || '').toLowerCase();
+      return (
+        t.includes('ferien') ||
+        t.includes('holiday') ||
+        t.includes('vacation') ||
+        t.includes('break') ||
+        t.includes('school closed') ||
+        t.includes('frei') ||
+        t.includes('unterrichtsfrei')
+      );
+    };
+
+    const byDateEvent = new Map();
+
+    for (const it of items) {
+      const type = getType(it);
+      const txt = getText(it);
+      if (!txt) continue;
+
+      // 1) single date event
+      if (it?.date && (type === 'event' || type === 'holiday' || type === 'dayevent')) {
+        const d = this.normalizeDate(it.date);
+        if (d && !byDateEvent.has(d)) byDateEvent.set(d, txt);
+        continue;
+      }
+
+      // 2) ranged event (inclusive)
+      if (it?.datefrom && it?.dateto && (type === 'event' || type === 'holiday')) {
+        const from = this.normalizeDate(it.datefrom);
+        const to = this.normalizeDate(it.dateto);
+
+        if (from && to) {
+          if (model.today.date >= from && model.today.date <= to) {
+            if (!byDateEvent.has(model.today.date)) byDateEvent.set(model.today.date, txt);
+          }
+          if (model.tomorrow.date >= from && model.tomorrow.date <= to) {
+            if (!byDateEvent.has(model.tomorrow.date)) byDateEvent.set(model.tomorrow.date, txt);
+          }
+        }
+      }
+    }
+
+    model.today.ferien = byDateEvent.get(model.today.date) || '';
+    model.tomorrow.ferien = byDateEvent.get(model.tomorrow.date) || '';
+
+    model.today.holiday = !!model.today.ferien && isHolidayText(model.today.ferien);
+    model.today.holidayName = model.today.holiday ? model.today.ferien : '';
+
+    model.tomorrow.holiday = !!model.tomorrow.ferien && isHolidayText(model.tomorrow.ferien);
+    model.tomorrow.holidayName = model.tomorrow.holiday ? model.tomorrow.ferien : '';
+
+    return model;
+  }
 
   async writeModel(model) {
     await this.setStateAsync('today.date', model.today.date, true);
@@ -411,5 +464,6 @@ parseCurrentTt(ttRes) {
 if (require.main !== module) {
   module.exports = options => new Edupage(options);
 } else {
+  // For local dev execution
   new Edupage();
 }

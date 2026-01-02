@@ -220,11 +220,23 @@ class Edupage extends utils.Adapter {
         return;
       }
 
-      // 6) _gsh: config or auto
-      let gsh = gshCfg;
-      if (!gsh) {
-        gsh = await this.eduClient.getGsh({ guPath });
+      gshCfg = (this.config.gsh ?? '').toString().trim();
+
+      // 6) _gsh must be provided from DevTools (auto-detect is unreliable)
+      if (!gshCfg) {
+        throw new Error(
+          'Missing _gsh in adapter config. Please copy it from DevTools (8 hex) and paste into settings.'
+        );
       }
+
+      // 6) _gsh must be provided from DevTools (auto-detect is unreliable)
+      if (!gshCfg) {
+        throw new Error(
+          'Missing _gsh in adapter config. Please copy it from DevTools (8 hex) and paste into settings.'
+        );
+      }
+
+      let gsh = gshCfg;
 
       // 7) timetable call (with proper Referer/Origin)
 
@@ -253,25 +265,17 @@ class Edupage extends utils.Adapter {
         },
       ];
 
+      // First call
       let ttRes = await this.eduClient.currentttGetData({ args, gsh, guPath });
 
-      // If EduPage returns reload-only, the context/_gsh is likely wrong -> refresh and retry once
-      const hasReloadOnly = ttRes && typeof ttRes === 'object' && 'reload' in ttRes && !('r' in ttRes);
-
-      if (hasReloadOnly || ttRes?.reload) {
-        this.log.warn(`TT returned reload. Refreshing context/_gsh and retrying once... (ttRes=${JSON.stringify(ttRes)})`);
-
-        // refresh context
-        await this.eduClient.warmUpTimetable({ guPath });
-
-        // refresh gsh (prefer fresh)
-        const freshGsh = await this.eduClient.getGsh({ guPath }).catch(() => '');
-        if (freshGsh) gsh = freshGsh;
-
+      // One retry if EduPage asks for reload
+      if (ttRes && typeof ttRes === 'object' && ttRes.reload === true) {
+        this.log.warn(`TT returned reload. Retrying once... (ttRes=${JSON.stringify(ttRes)})`);
         ttRes = await this.eduClient.currentttGetData({ args, gsh, guPath });
         this.log.warn(`TT raw after retry: ${JSON.stringify(ttRes)}`);
       }
 
+      // Parse + write exactly once
       const parsed = this.parseCurrentTt(ttRes);
       await this.writeModel(parsed);
 
@@ -281,6 +285,7 @@ class Edupage extends utils.Adapter {
       this.log.info(
         `Sync done. today.ferien="${parsed.today.ferien || ''}" today.holiday=${parsed.today.holiday} tomorrow.ferien="${parsed.tomorrow.ferien || ''}" tomorrow.holiday=${parsed.tomorrow.holiday}`
       );
+
     } catch (e) {
       const msg = String(e?.message || e);
       await this.setStateAsync('meta.lastError', msg, true);

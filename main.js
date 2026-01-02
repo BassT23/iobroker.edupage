@@ -229,10 +229,15 @@ class Edupage extends utils.Adapter {
         throw new Error('Could not determine _gsh. Please set it in adapter config (from DevTools).');
       }
 
-      // 7) timetable call
-      const yyyy = new Date().getFullYear();
-      const sid = Number(studentId);
-      const eduId = sid > 0 ? String(-sid) : String(sid);
+      // 7) timetable call (with proper Referer/Origin)
+
+      // IMPORTANT: EduPage expects "year" from dateFrom, not from "today"
+      const yyyy = Number(String(dateFrom).slice(0, 4)) || new Date().getFullYear();
+
+      // DEBUG: make sure payload matches browser request
+      this.log.warn(
+        `TT payload check: year=${yyyy} datefrom=${dateFrom} dateto=${dateTo} id=${eduId}`
+      );
 
       const args = [
         null,

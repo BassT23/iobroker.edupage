@@ -1,8 +1,7 @@
 {
-  "plugins": [
-    "@alcalzone/release-script-plugin-license",
-    "@alcalzone/release-script-plugin-manual-review",
-    "@alcalzone/release-script-plugin-iobroker"
-  ],
-  "noInitialVersion": false
+  "plugins": {
+    "license": true,
+    "manual-review": true,
+    "iobroker": true
+  }
 }

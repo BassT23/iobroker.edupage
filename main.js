@@ -281,12 +281,12 @@ class Edupage extends utils.Adapter {
       // ttRes is RAW now: { data, status, headers }
       let ttRes = await this.eduClient.currentttGetData({ args, gsh, guPath });
 
+      // helper FIRST
+      const ttData = () => ttRes?.data;
+
       if (typeof ttData() === 'string') {
         this.log.warn(`TT returned string (likely HTML). Head: ${String(ttData()).slice(0, 200)}`);
       }
-
-      // helper for readable logging + parsing
-      const ttData = () => ttRes?.data;
 
       // reload handling (first retry)
       if (ttData()?.reload) {

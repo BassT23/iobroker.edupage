@@ -246,28 +246,23 @@ class Edupage extends utils.Adapter {
         }
       ];
 
-      const ttRes = await this.eduClient.currentttGetData({ args, gsh, guPath });
+      let ttRes = await this.eduClient.currentttGetData({ args, gsh, guPath });
 
-      // lightweight diagnostics (no sensitive data)
-      try {
-        const topKeys = Object.keys(ttRes || {});
-        const r = ttRes?.r || ttRes?.data?.r || {};
-        const rKeys = Object.keys(r || {});
-        const items = r?.ttitems || r?.eventitems || r?.events || r?.items || [];
-        const count = Array.isArray(items) ? items.length : -1;
-        const sample = Array.isArray(items) ? items.slice(0, 2) : [];
-        this.log.info(`TT keys: ${topKeys.join(', ')}`);
-        this.log.info(`TT.r keys: ${rKeys.join(', ')}`);
-        this.log.info(`TT items count: ${count}`);
-        if (count === 0) {
-          this.log.warn('TT items are empty. This can happen in holidays OR if we read the wrong response path.');
-        }
-        if (sample.length) {
-          // sample can include IDs; keep it short and allow you to anonymize if you paste it
-          this.log.debug(`TT sample(2): ${JSON.stringify(sample)}`);
-        }
-      } catch {
-        // ignore diagnostics errors
+      // If EduPage returns reload-only, the context/_gsh is likely wrong -> refresh and retry once
+      const hasReloadOnly = ttRes && typeof ttRes === 'object' && 'reload' in ttRes && !('r' in ttRes);
+
+      if (hasReloadOnly || ttRes?.reload) {
+        this.log.warn(`TT returned reload. Refreshing context/_gsh and retrying once... (ttRes=${JSON.stringify(ttRes)})`);
+
+        // refresh context
+        await this.eduClient.warmUpTimetable({ guPath });
+
+        // refresh gsh (prefer fresh)
+        const freshGsh = await this.eduClient.getGsh({ guPath }).catch(() => '');
+        if (freshGsh) gsh = freshGsh;
+
+        ttRes = await this.eduClient.currentttGetData({ args, gsh, guPath });
+        this.log.warn(`TT raw after retry: ${JSON.stringify(ttRes)}`);
       }
 
       const parsed = this.parseCurrentTt(ttRes);

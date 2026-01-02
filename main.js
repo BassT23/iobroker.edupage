@@ -202,6 +202,10 @@ class Edupage extends utils.Adapter {
 
       // 3) warmup timetable
       await this.eduClient.warmUpTimetable({ guPath });
+      // repeat timetable view once (some instances set context cookies on 2nd hit)
+      await this.http.get(this.getDashboardTimetableRefererPath(), {
+        headers: { Accept: 'text/html,*/*', Referer: dashRef },
+      }).catch(() => {});
 
       // 4) dates
       const model = this.emptyModel();
@@ -274,18 +278,34 @@ class Edupage extends utils.Adapter {
         },
       ];
 
-      // First call
+      // ttRes is RAW now: { data, status, headers }
       let ttRes = await this.eduClient.currentttGetData({ args, gsh, guPath });
 
-      // One retry if EduPage asks for reload
-      if (ttRes && typeof ttRes === 'object' && ttRes.reload === true) {
-        this.log.warn(`TT returned reload. Retrying once... (ttRes=${JSON.stringify(ttRes)})`);
-        ttRes = await this.eduClient.currentttGetData({ args, gsh, guPath });
-        this.log.warn(`TT raw after retry: ${JSON.stringify(ttRes)}`);
+      if (typeof ttData() === 'string') {
+        this.log.warn(`TT returned string (likely HTML). Head: ${String(ttData()).slice(0, 200)}`);
       }
 
-      // Parse + write exactly once
-      const parsed = this.parseCurrentTt(ttRes);
+      // helper for readable logging + parsing
+      const ttData = () => ttRes?.data;
+
+      // reload handling (first retry)
+      if (ttData()?.reload) {
+        this.log.warn(`TT returned reload. Retrying once... (ttRes=${JSON.stringify(ttData())})`);
+
+        // retry once (warmup is already done in client, but we keep behavior)
+        ttRes = await this.eduClient.currentttGetData({ args, gsh, guPath });
+
+        this.log.warn(`TT raw after retry: ${JSON.stringify(ttData())}`);
+
+        // IMPORTANT: headers are useful for debugging reload cause
+        if (ttData()?.reload) {
+          this.log.warn(`TT reload headers: ${JSON.stringify(ttRes?.headers || {})}`);
+          this.log.warn(`TT reload status: ${ttRes?.status || ''}`);
+        }
+      }
+
+      // parse MUST use ttRes.data now
+      const parsed = this.parseCurrentTt(ttData());
       await this.writeModel(parsed);
 
       await this.setStateAsync('info.connection', true, true);

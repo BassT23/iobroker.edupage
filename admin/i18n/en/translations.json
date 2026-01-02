@@ -12,5 +12,7 @@
   "cfg_maxLessons_help": "Minimum: 6",
   "cfg_enableWeek": "Week view",
   "cfg_studentId": "Student ID",
-  "cfg_studentId_help": "EduPage internal student ID (required for parent accounts). Open timetable in browser → DevTools → Network → currentttGetData → args[1].id"
+  "cfg_studentId_help": "In EduPage DevTools → Network → currentttGetData → Payload → field \"id\" (number only, e.g. 1234).",
+  "cfg_gsh": "_gsh (optional)",
+  "cfg_gsh_help": "In EduPage DevTools → Network → currentttGetData → Payload → \"_gsh\" (8 hex). If set, auto-detect is not required."
 }

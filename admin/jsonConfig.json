@@ -7,7 +7,6 @@
       "text": "cfg_header",
       "size": 5
     },
-
     "hint": {
       "type": "staticText",
       "text": "cfg_hint",
@@ -17,7 +16,6 @@
       "lg": 12,
       "xl": 12
     },
-
     "baseUrl": {
       "type": "text",
       "label": "cfg_baseUrl",
@@ -29,19 +27,6 @@
       "lg": 12,
       "xl": 12
     },
-
-    "studentId": {
-      "type": "text",
-      "label": "cfg_studentId",
-      "help": "cfg_studentId_help",
-      "placeholder": "1234",
-      "xs": 12,
-      "sm": 6,
-      "md": 6,
-      "lg": 6,
-      "xl": 6
-    },
-
     "username": {
       "type": "text",
       "label": "cfg_username",
@@ -60,7 +45,28 @@
       "lg": 6,
       "xl": 6
     },
-
+    "studentId": {
+      "type": "text",
+      "label": "cfg_studentId",
+      "help": "cfg_studentId_help",
+      "placeholder": "1234",
+      "xs": 12,
+      "sm": 6,
+      "md": 6,
+      "lg": 6,
+      "xl": 6
+    },
+    "gsh": {
+      "type": "text",
+      "label": "cfg_gsh",
+      "help": "cfg_gsh_help",
+      "placeholder": "deadbeef",
+      "xs": 12,
+      "sm": 6,
+      "md": 6,
+      "lg": 6,
+      "xl": 6
+    },
     "intervalMin": {
       "type": "number",
       "label": "cfg_intervalMin",
@@ -83,7 +89,6 @@
       "lg": 6,
       "xl": 6
     },
-
     "enableWeek": {
       "type": "checkbox",
       "label": "cfg_enableWeek",

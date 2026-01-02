@@ -12,5 +12,7 @@
   "cfg_maxLessons_help": "Minimum: 6",
   "cfg_enableWeek": "Wochenansicht",
   "cfg_studentId": "Schüler-ID",
-  "cfg_studentId_help": "Interne EduPage Schüler-ID (bei Eltern-Accounts notwendig). Im Browser den Stundenplan öffnen → Entwickler-Tools → Network → currentttGetData → args[1].id"
+  "cfg_studentId_help": "In EduPage DevTools → Network → currentttGetData → Payload → Feld \"id\" (nur Zahl, z.B. 1234).",
+  "cfg_gsh": "_gsh (optional)",
+  "cfg_gsh_help": "In EduPage DevTools → Network → currentttGetData → Payload → \"_gsh\" (8 hex). Wenn gesetzt, kein Auto-Detect nötig."
 }

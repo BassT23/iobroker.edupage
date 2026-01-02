@@ -7,14 +7,15 @@ const { EdupageClient } = require('./lib/edupageClient');
 class Edupage extends utils.Adapter {
   constructor(options) {
     super({ ...options, name: 'edupage' });
-
     this.on('ready', this.onReady.bind(this));
     this.on('unload', this.onUnload.bind(this));
 
     this.timer = null;
     this.maxLessons = 12;
-
     this.pausedUntil = 0;
+
+    this.eduHttp = null;
+    this.eduClient = null;
   }
 
   async onReady() {
@@ -25,7 +26,6 @@ class Edupage extends utils.Adapter {
       this.log.error('Please set baseUrl (e.g. https://myschool.edupage.org)');
       return;
     }
-
     if (!this.config.username || !this.config.password) {
       this.log.warn('No username/password set yet. Adapter stays idle until configured.');
       return;
@@ -124,7 +124,6 @@ class Edupage extends utils.Adapter {
       });
       if (!tokRes?.token) throw new Error(tokRes?.err?.error_text || 'No token');
 
-      // ✅ FIX: Referer Path kommt jetzt aus EdupageClient (und existiert sicher)
       const fallbackGu = md?.gu ?? this.eduClient.getTimetableRefererPath();
 
       const loginRes = await this.eduClient.login({
@@ -139,7 +138,9 @@ class Edupage extends utils.Adapter {
       });
 
       const captchaSrc = loginRes?.captchaSrc || loginRes?.err?.captchaSrc;
-      const needCaptcha = loginRes?.needCaptcha === '1' || /captcha|verdächt/i.test(String(loginRes?.err?.error_text || ''));
+      const needCaptcha =
+        loginRes?.needCaptcha === '1' ||
+        /captcha|verdächt/i.test(String(loginRes?.err?.error_text || ''));
 
       if (needCaptcha || captchaSrc) {
         const url = captchaSrc
@@ -149,13 +150,14 @@ class Edupage extends utils.Adapter {
         return;
       }
 
-      if (loginRes?.status !== 'OK') {
-        throw new Error(loginRes?.err?.error_text || 'Login failed');
-      }
+      if (loginRes?.status !== 'OK') throw new Error(loginRes?.err?.error_text || 'Login failed');
 
+      // Warmup in Adapter-Session
       await this.eduClient.warmUpTimetable();
 
-      const gsh = await this.eduClient.getGsh();
+      // ✅ Option A: config.gsh bevorzugen, sonst auto-detect
+      const gshCfg = (this.config.gsh || '').toString().trim();
+      const gsh = await this.eduClient.getGsh({ gshOverride: gshCfg });
 
       const model = this.emptyModel();
       const weekView = !!this.config.enableWeek;
@@ -170,7 +172,6 @@ class Edupage extends utils.Adapter {
         monday.setDate(d.getDate() - day);
         const sunday = new Date(monday);
         sunday.setDate(monday.getDate() + 6);
-
         dateFrom = monday.toISOString().slice(0, 10);
         dateTo = sunday.toISOString().slice(0, 10);
       }
@@ -245,22 +246,16 @@ class Edupage extends utils.Adapter {
   buildModelFromTT(tt) {
     const model = this.emptyModel();
     const r = tt?.r || tt;
-
     const items = Array.isArray(r?.ttitems) ? r.ttitems : [];
+
     const today = model.today.date;
     const tomorrow = model.tomorrow.date;
 
     const tHoliday = items.find(x => x?.type === 'event' && x?.date === today && typeof x?.name === 'string' && x.name.toLowerCase().includes('ferien'));
     const tmHoliday = items.find(x => x?.type === 'event' && x?.date === tomorrow && typeof x?.name === 'string' && x.name.toLowerCase().includes('ferien'));
 
-    if (tHoliday) {
-      model.today.holiday = true;
-      model.today.holidayName = tHoliday.name || '';
-    }
-    if (tmHoliday) {
-      model.tomorrow.holiday = true;
-      model.tomorrow.holidayName = tmHoliday.name || '';
-    }
+    if (tHoliday) { model.today.holiday = true; model.today.holidayName = tHoliday.name || ''; }
+    if (tmHoliday) { model.tomorrow.holiday = true; model.tomorrow.holidayName = tmHoliday.name || ''; }
 
     return model;
   }

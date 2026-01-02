@@ -190,8 +190,11 @@ class Edupage extends utils.Adapter {
       }
 
       // 2.5) post-login warmup to obtain full session cookies (e.g. edusrs)
-      await this.eduHttp.get('/user/').catch(() => {});
+      await this.eduHttp.get('/login/').catch(() => {});
+      await this.eduHttp.get('/').catch(() => {});
       await this.eduHttp.get('/dashboard/').catch(() => {});
+      await this.eduHttp.get('/dashboard/eb.php?mode=timetable').catch(() => {});
+
 
       // 3) warmup timetable
       await this.eduClient.warmUpTimetable({ guPath });

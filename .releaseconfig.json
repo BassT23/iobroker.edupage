@@ -1,7 +1,7 @@
 {
-  "plugins": {
-    "license": true,
-    "manual-review": true,
-    "iobroker": true
-  }
+  "plugins": [
+    "license",
+    "manual-review",
+    "iobroker"
+  ]
 }

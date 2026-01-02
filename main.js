@@ -14,8 +14,7 @@ class Edupage extends utils.Adapter {
     this.timer = null;
     this.maxLessons = 12;
 
-    // Captcha / Backoff
-    this.pausedUntil = 0; // timestamp ms
+    this.pausedUntil = 0;
   }
 
   async onReady() {
@@ -33,24 +32,18 @@ class Edupage extends utils.Adapter {
     }
 
     this.maxLessons = Math.max(6, Number(this.config.maxLessons || 12));
-
     await this.ensureStates();
 
-    // HTTP + Client (Cookies bleiben erhalten)
     this.eduHttp = new EdupageHttp({ baseUrl, log: this.log });
     this.eduClient = new EdupageClient({ http: this.eduHttp, log: this.log });
 
-    // 1x sofort
     await this.syncOnce().catch(e => this.log.warn(`Initial sync failed: ${e?.message || e}`));
 
-    // Intervall
     const intervalMin = Math.max(5, Number(this.config.intervalMin || 15));
     this.timer = setInterval(() => {
       this.syncOnce().catch(e => this.log.warn(`Sync failed: ${e?.message || e}`));
     }, intervalMin * 60 * 1000);
   }
-
-  // ---------------- states ----------------
 
   async ensureStates() {
     const defs = [
@@ -62,7 +55,6 @@ class Edupage extends utils.Adapter {
       ['today.date', 'string', 'Today date'],
       ['tomorrow.date', 'string', 'Tomorrow date'],
 
-      // Ferien extra
       ['today.holiday', 'boolean', 'Today is holiday/vacation'],
       ['today.holidayName', 'string', 'Holiday/vacation name today'],
       ['tomorrow.holiday', 'boolean', 'Tomorrow is holiday/vacation'],
@@ -116,32 +108,25 @@ class Edupage extends utils.Adapter {
     }
   }
 
-  // ---------------- main sync ----------------
-
   async syncOnce() {
-    // Pause aktiv?
     const now = Date.now();
-    if (this.pausedUntil && now < this.pausedUntil) {
-      // ruhig bleiben, kein Spam
-      return;
-    }
+    if (this.pausedUntil && now < this.pausedUntil) return;
 
     try {
       await this.setStateAsync('meta.lastError', '', true);
       await this.setStateAsync('meta.captchaUrl', '', true);
 
-      // 0) getData (optional)
       const md = await this.eduClient.getLoginData().catch(() => null);
 
-      // 1) token
       const tokRes = await this.eduClient.getToken({
         username: this.config.username,
-        edupage: this.eduClient.school, // subdomain
+        edupage: this.eduClient.school,
       });
-
       if (!tokRes?.token) throw new Error(tokRes?.err?.error_text || 'No token');
 
-      // 2) login
+      // ✅ FIX: Referer Path kommt jetzt aus EdupageClient (und existiert sicher)
+      const fallbackGu = md?.gu ?? this.eduClient.getTimetableRefererPath();
+
       const loginRes = await this.eduClient.login({
         username: this.config.username,
         password: this.config.password,
@@ -149,12 +134,10 @@ class Edupage extends utils.Adapter {
         edupage: this.eduClient.school,
         ctxt: '',
         tu: md?.tu ?? null,
-        gu: md?.gu ?? this.eduClient.getTimetableRefererPath(),
+        gu: fallbackGu,
         au: md?.au ?? null,
       });
 
-      // Captcha / suspicious activity?
-      // EduPage liefert oft res.needCaptcha / captchaSrc / oder error_text
       const captchaSrc = loginRes?.captchaSrc || loginRes?.err?.captchaSrc;
       const needCaptcha = loginRes?.needCaptcha === '1' || /captcha|verdächt/i.test(String(loginRes?.err?.error_text || ''));
 
@@ -162,7 +145,6 @@ class Edupage extends utils.Adapter {
         const url = captchaSrc
           ? (captchaSrc.startsWith('http') ? captchaSrc : (this.eduHttp.baseUrl.replace(/\/+$/, '') + captchaSrc))
           : '';
-
         await this.handleCaptchaBlock(url, loginRes?.err?.error_text || 'Captcha required');
         return;
       }
@@ -171,13 +153,10 @@ class Edupage extends utils.Adapter {
         throw new Error(loginRes?.err?.error_text || 'Login failed');
       }
 
-      // 3) timetable warm-up (wichtig gegen "404")
       await this.eduClient.warmUpTimetable();
 
-      // 4) _gsh
       const gsh = await this.eduClient.getGsh();
 
-      // 5) args bauen (Option A: Wochenansicht via enableWeek)
       const model = this.emptyModel();
       const weekView = !!this.config.enableWeek;
 
@@ -185,9 +164,8 @@ class Edupage extends utils.Adapter {
       let dateTo = model.tomorrow.date;
 
       if (weekView) {
-        // Mo..So der aktuellen Woche
         const d = new Date();
-        const day = (d.getDay() + 6) % 7; // Mo=0
+        const day = (d.getDay() + 6) % 7;
         const monday = new Date(d);
         monday.setDate(d.getDate() - day);
         const sunday = new Date(monday);
@@ -197,11 +175,8 @@ class Edupage extends utils.Adapter {
         dateTo = sunday.toISOString().slice(0, 10);
       }
 
-      // studentId aus config (kein Log!)
       const studentId = (this.config.studentId || '').toString().trim();
-      if (!studentId) {
-        throw new Error('studentId missing. Please set it in the adapter settings.');
-      }
+      if (!studentId) throw new Error('studentId missing. Please set it in the adapter settings.');
 
       const args = [
         null,
@@ -218,10 +193,7 @@ class Edupage extends utils.Adapter {
         },
       ];
 
-      // 6) currentttGetData
       const tt = await this.eduClient.currentttGetData({ args, gsh });
-
-      // 7) model bauen + states schreiben (hier erstmal minimal: Ferien + next/today/tomorrow leer, weil deine Response gerade Ferien-Events zeigt)
       const built = this.buildModelFromTT(tt);
 
       await this.writeModel(built);
@@ -237,7 +209,6 @@ class Edupage extends utils.Adapter {
   }
 
   async handleCaptchaBlock(url, reasonText) {
-    // Pause 60 Minuten, Timer stoppen
     const pauseMs = 60 * 60 * 1000;
     this.pausedUntil = Date.now() + pauseMs;
 
@@ -253,19 +224,13 @@ class Edupage extends utils.Adapter {
     }
 
     if (url) {
-      this.log.error(
-        `Captcha nötig / verdächtige Aktivität erkannt. Öffne diese URL im Browser, logge dich neu ein und tippe den Text aus dem Bild ein: ${url}`
-      );
+      this.log.error(`Captcha nötig / verdächtige Aktivität erkannt. Öffne diese URL im Browser und löse das Captcha: ${url}`);
     } else {
-      this.log.error(
-        'Captcha nötig / verdächtige Aktivität erkannt. Öffne EduPage im Browser, logge dich neu ein und löse die Captcha-Abfrage.'
-      );
+      this.log.error('Captcha nötig / verdächtige Aktivität erkannt. Öffne EduPage im Browser und löse das Captcha.');
     }
 
-    this.log.warn(`[Backoff] Captcha required by EduPage. Adapter paused for ~60 min. Please restart adapter after solving captcha.`);
+    this.log.warn('[Backoff] Captcha required by EduPage. Adapter paused for ~60 min. Please restart adapter after solving captcha.');
   }
-
-  // ---------------- model building ----------------
 
   emptyModel() {
     const today = new Date();
@@ -279,9 +244,8 @@ class Edupage extends utils.Adapter {
 
   buildModelFromTT(tt) {
     const model = this.emptyModel();
-    const r = tt?.r || tt; // manchmal kommt {r:{...}}
+    const r = tt?.r || tt;
 
-    // Ferien aus ttitems ableiten (type=event, ganztägig)
     const items = Array.isArray(r?.ttitems) ? r.ttitems : [];
     const today = model.today.date;
     const tomorrow = model.tomorrow.date;
@@ -298,13 +262,8 @@ class Edupage extends utils.Adapter {
       model.tomorrow.holidayName = tmHoliday.name || '';
     }
 
-    // Lessons Parsing: kommt bei dir später, wenn "normale" Stunden da sind.
-    // Für jetzt lassen wir lessons leer (exists=false States werden gesetzt).
-
     return model;
   }
-
-  // ---------------- state writing ----------------
 
   async writeModel(model) {
     await this.setStateAsync('today.date', model.today.date, true);

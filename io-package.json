@@ -107,10 +107,10 @@
     "password": "",
     "intervalMin": 15,
     "maxLessons": 12,
-    "enableWeek": false
-  },
-  "protectedNative": ["password"],
-  "encryptedNative": ["password"],
+    "enableWeek": false,
+    "edusrs": ""  },
+  "protectedNative": ["password", "edusrs"],
+  "encryptedNative": ["password", "edusrs"],
   "objects": [],
   "instanceObjects": []
 }

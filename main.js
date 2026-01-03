@@ -197,6 +197,27 @@ class Edupage extends utils.Adapter {
       // 3) warmup timetable
       await this.eduClient.warmUpTimetable({ guPath });
 
+      // 3b) inject edusrs from adapter config (required for timetable API)
+      const edusrsCfg = (this.config.edusrs ?? '').toString().trim();
+      if (!edusrsCfg) {
+        this.log.warn('No edusrs configured. EduPage timetable API will likely return {"reload":true}.');
+      } else {
+        try {
+          const baseUrlNoSlash = (this.eduHttp?.baseUrl || '').replace(/\/+$/, '');
+          // set as parent-domain cookie so it applies to subdomain as well
+          await this.eduHttp.jar.setCookie(
+            `edusrs=${edusrsCfg}; Domain=.edupage.org; Path=/; Secure; SameSite=None`,
+            baseUrlNoSlash
+          );
+
+          // privacy-safe: names only
+          const names = await this.eduHttp.cookieNamesFor('/timetable/server/currenttt.js');
+          this.log.info(`edusrs injected from config. Cookies now (names): ${names.join(', ')}`);
+        } catch (e) {
+          this.log.warn(`Failed to inject edusrs from config: ${e?.message || e}`);
+        }
+      }
+
       // 4) dates
       const model = this.emptyModel();
       let dateFrom = model.today.date;
@@ -223,13 +244,6 @@ class Edupage extends utils.Adapter {
         await this.setStateAsync('meta.lastSync', Date.now(), true);
         await this.setStateAsync('info.connection', true, true);
         return;
-      }
-
-      // 6) _gsh must be provided from DevTools (auto-detect is unreliable)
-      if (!gshCfg) {
-        throw new Error(
-          'Missing _gsh in adapter config. Please copy it from DevTools (8 hex) and paste into settings.'
-        );
       }
 
       // 6) _gsh must be provided from DevTools (auto-detect is unreliable)
@@ -282,12 +296,11 @@ class Edupage extends utils.Adapter {
       if (ttData()?.reload) {
         this.log.warn(`TT returned reload. Retrying once... (ttRes=${JSON.stringify(ttData())})`);
 
-        // retry once (warmup is already done in client, but we keep behavior)
+        // retry once
         ttRes = await this.eduClient.currentttGetData({ args, gsh, guPath });
 
         this.log.warn(`TT raw after retry: ${JSON.stringify(ttData())}`);
 
-        // IMPORTANT: headers are useful for debugging reload cause
         if (ttData()?.reload) {
           this.log.warn(`TT reload headers: ${JSON.stringify(ttRes?.headers || {})}`);
           this.log.warn(`TT reload status: ${ttRes?.status || ''}`);
@@ -313,7 +326,6 @@ class Edupage extends utils.Adapter {
       this.log.error(`Sync error: ${msg}`);
       throw e;
     }
-  }
 
   makeAbsoluteUrl(path) {
     if (!path) return '';

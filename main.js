@@ -326,6 +326,7 @@ class Edupage extends utils.Adapter {
       this.log.error(`Sync error: ${msg}`);
       throw e;
     }
+  }
 
   makeAbsoluteUrl(path) {
     if (!path) return '';
